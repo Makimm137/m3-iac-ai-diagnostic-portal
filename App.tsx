@@ -545,7 +545,7 @@ const App: React.FC = () => {
       <footer className="border-t border-slate-100 mt-20 py-16 bg-white print:hidden">
         <div className="max-w-[1400px] mx-auto px-8">
            <p className="text-[10px] text-slate-300 text-center max-w-4xl mx-auto leading-relaxed uppercase font-normal tracking-[0.2em] opacity-80">
-             © 2024 MEDICAL AI SYSTEMS CORP. ALL DIAGNOSTIC RESULTS ARE AI-GENERATED FOR DECISION SUPPORT AND MUST BE VERIFIED BY A CERTIFIED DENTAL PROFESSIONAL. CLINICAL INTERVENTION DECISIONS REMAIN THE RESPONSIBILITY OF THE TREATING CLINICIAN.
+             © 2026 MEDICAL AI SYSTEMS CORP. ALL DIAGNOSTIC RESULTS ARE AI-GENERATED FOR DECISION SUPPORT AND MUST BE VERIFIED BY A CERTIFIED DENTAL PROFESSIONAL. CLINICAL INTERVENTION DECISIONS REMAIN THE RESPONSIBILITY OF THE TREATING CLINICIAN.
            </p>
         </div>
       </footer>

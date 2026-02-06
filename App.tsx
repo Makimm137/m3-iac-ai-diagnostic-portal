@@ -98,7 +98,10 @@ const App: React.FC = () => {
     "riskScore": "X.X/10",
     "injuryProbability": "XX.X%",
     "highRiskSigns": ["征象1", "征象2"],
-    "recommendation": "专业的临床建议"
+    "recommendation": [
+      "第一段：关于位置和接触关系的描述",
+      "第二段：关于风险评估结论和临床建议"
+    ]
   },
   "right": {
     "toothPosition": "右下颌第三磨牙",
@@ -109,10 +112,22 @@ const App: React.FC = () => {
     "riskScore": "X.X/10",
     "injuryProbability": "XX.X%",
     "highRiskSigns": ["征象"],
-    "recommendation": "建议内容"
+    "recommendation": [
+      "第一段：关于位置和接触关系的描述",
+      "第二段：关于风险评估结论和临床建议"
+    ]
   }
 }
+
+关于 recommendation 字段的具体要求：
+该字段的字符串**必须**由两段组成，中间用一个换行符 \`\\n\` 分隔。
+**严格遵循此范例格式**
+1. 第一段：先写一段表述下颌第三磨牙和下颌神经管风险评估指标的描述，如位置关系，接触关系，注意面对的是医生和患者，类似报告，文字书面化专业但通俗易懂。
+2. 然后换一行。一定要换行！！！
+3. 第二段：写具体的风险评估结论，如手术损伤风险高低，并给出临床建议（如建议拍CBCT明确三维位置、拔除手术方式建议等），详细专业。
+
 注意：所有文本输出必须准确、专业且简洁。`;
+      
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',

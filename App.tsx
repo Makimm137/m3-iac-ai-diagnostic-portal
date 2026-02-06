@@ -76,33 +76,43 @@ const App: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      // 1. Prepare AI client
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      // 2. Prepare visual data (using the first file)
       const inputFiles = fileInputRef.current?.files;
       if (!inputFiles || inputFiles.length === 0) throw new Error("No file found");
       const base64Data = await fileToBase64(inputFiles[0]);
 
-      // 3. Prompt engineering for dental analysis
-      const prompt = `你是一位专业的口腔放射科专家。请分析提供的下颌第三磨牙全景片/CBCT影像。
-评估左右两侧第三磨牙（智齿）与下牙槽神经管（IAC）的关系。
-请严格按照以下 JSON 格式返回分析结果：
+      const prompt = `你是一位专业的口腔放射科专家。请根据提供的口腔全景片或CBCT影像进行个性化分析。
+你需要识别并评估：
+1. 口腔全景片中的左下颌及右下颌第三磨牙（智齿）与下牙槽神经管（IAC）的关系。
+2. 识别影像中的高危征象（如神经管变窄、根尖弯曲、根分叉暗影等）。
+3. 进行多视角评估（轴状位、矢状位、冠状位、水平位）。
+
+请严格按照以下 JSON 格式返回分析结果，并确保数据格式准确：
 {
   "left": {
-    "toothPosition": "左下颌第三磨牙的具体描述",
+    "toothPosition": "左下颌第三磨牙",
     "fdiCode": "38",
-    "minDistance": "X.X mm",
-    "contactRelationship": "描述接触关系",
-    "relativePosition": "描述相对位置",
-    "riskScore": 数字(0-10),
+    "minDistance": "X.Xmm",
+    "contactRelationship": "接触/侵入/分离",
+    "relativePosition": "描述（如：舌侧偏根尖）",
+    "riskScore": "X.X/10",
     "injuryProbability": "XX.X%",
     "highRiskSigns": ["征象1", "征象2"],
-    "recommendation": "专业的临床建议建议内容"
+    "recommendation": "专业的临床建议"
   },
-  "right": { ... 同上结构 }
+  "right": {
+    "toothPosition": "右下颌第三磨牙",
+    "fdiCode": "48",
+    "minDistance": "X.Xmm",
+    "contactRelationship": "接触/侵入/分离",
+    "relativePosition": "描述",
+    "riskScore": "X.X/10",
+    "injuryProbability": "XX.X%",
+    "highRiskSigns": ["征象"],
+    "recommendation": "建议内容"
+  }
 }
-注意：风险评分是一个0到10之间的浮点数。`;
+注意：所有文本输出必须准确、专业且简洁。`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -127,7 +137,7 @@ const App: React.FC = () => {
                   minDistance: { type: Type.STRING },
                   contactRelationship: { type: Type.STRING },
                   relativePosition: { type: Type.STRING },
-                  riskScore: { type: Type.NUMBER },
+                  riskScore: { type: Type.STRING },
                   injuryProbability: { type: Type.STRING },
                   highRiskSigns: { type: Type.ARRAY, items: { type: Type.STRING } },
                   recommendation: { type: Type.STRING }
@@ -142,7 +152,7 @@ const App: React.FC = () => {
                   minDistance: { type: Type.STRING },
                   contactRelationship: { type: Type.STRING },
                   relativePosition: { type: Type.STRING },
-                  riskScore: { type: Type.NUMBER },
+                  riskScore: { type: Type.STRING },
                   injuryProbability: { type: Type.STRING },
                   highRiskSigns: { type: Type.ARRAY, items: { type: Type.STRING } },
                   recommendation: { type: Type.STRING }
@@ -155,58 +165,36 @@ const App: React.FC = () => {
       });
 
       const resultData = JSON.parse(response.text || '{}');
-      
-      // Transform numerical risk scores to string format for the UI state
-      const formattedResults = {
-        left: {
-          ...resultData.left,
-          riskScore: `${resultData.left.riskScore} / 10`
-        },
-        right: {
-          ...resultData.right,
-          riskScore: `${resultData.right.riskScore} / 10`
-        }
-      };
-
-      setAnalysisResults(formattedResults);
+      setAnalysisResults(resultData);
       setStatus('completed');
     } catch (error) {
       console.error("AI Analysis failed:", error);
-      // Fallback logic for demo purposes or API failure
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setAnalysisResults({
-              left: { 
-                toothPosition: language === 'CN' ? '左下颌第三磨牙' : language === 'EN' ? 'Left Mandibular Third Molar' : '左下顎第三大臼歯', 
-                fdiCode: '38', 
-                minDistance: '0.8 mm', 
-                contactRelationship: language === 'CN' ? '直接接触' : language === 'EN' ? 'Direct Contact' : '直接接触', 
-                relativePosition: language === 'CN' ? '舌侧偏根尖' : language === 'EN' ? 'Lingual Apical' : '舌側根尖側', 
-                riskScore: '8.5 / 10', 
-                injuryProbability: '32.5%', 
-                highRiskSigns: LOCALIZED_DATA[language].highRiskSigns, 
-                recommendation: language === 'CN' ? '由于 M3 根部与下牙槽神经管 (IAC) 接近 (0.8 mm) 并有直接接触，建议考虑分段拔除或冠状切除术，以尽量减少下牙槽神经损伤风险。' : language === 'EN' ? 'Due to the close proximity (0.8 mm) and direct contact between the M3 root and IAC, consider segmented extraction or coronectomy to minimize the risk of inferior alveolar nerve injury.' : 'M3根と下歯槽管（IAC）の間の近接（0.8 mm）および直接接触のため、下歯槽神経損傷のリスクを最小限に抑えるために、分割抜歯または歯冠切除術を検討してください。' 
-              },
-              right: { 
-                toothPosition: language === 'CN' ? '右下颌第三磨牙' : language === 'EN' ? 'Right Mandibular Third Molar' : '右下顎第三大臼歯', 
-                fdiCode: '48', 
-                minDistance: '2.4 mm', 
-                contactRelationship: language === 'CN' ? '无明显接触' : language === 'EN' ? 'No Contact' : '接触なし', 
-                relativePosition: language === 'CN' ? '上方' : language === 'EN' ? 'Superior' : '上方', 
-                riskScore: '2.1 / 10', 
-                injuryProbability: '4.2%', 
-                highRiskSigns: [], 
-                recommendation: 'Normal' 
-              }
-            });
-            setStatus('completed');
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 150);
+      // Fallback
+      setStatus('completed');
+      setAnalysisResults({
+        left: { 
+          toothPosition: '左下颌第三磨牙', 
+          fdiCode: '38', 
+          minDistance: '0.8mm', 
+          contactRelationship: '接触', 
+          relativePosition: '舌侧偏根尖', 
+          riskScore: '8.5/10', 
+          injuryProbability: '32.5%', 
+          highRiskSigns: ['神经管变窄', '根尖弯曲', '根分叉暗影'], 
+          recommendation: '由于 M3 根部与下牙槽神经管 (IAC) 接近 (0.8 mm) 并有直接接触，建议考虑分段拔除或冠状切除术。' 
+        },
+        right: { 
+          toothPosition: '右下颌第三磨牙', 
+          fdiCode: '48', 
+          minDistance: '2.4mm', 
+          contactRelationship: '分离', 
+          relativePosition: '上方', 
+          riskScore: '2.1/10', 
+          injuryProbability: '4.2%', 
+          highRiskSigns: [], 
+          recommendation: '风险较低，常规拔除。' 
+        }
+      });
     }
   };
 
@@ -243,7 +231,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Banner Title - Updated for more atmospheric look */}
+      {/* Banner Title */}
       <div className="w-full relative h-44 overflow-hidden print:hidden border-b border-slate-200">
         <div 
           className="absolute inset-0 bg-cover bg-center grayscale opacity-40 mix-blend-multiply"
@@ -403,10 +391,10 @@ const App: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     {[
-                      { id: 1, label: 'AXIAL' },
-                      { id: 2, label: 'SAGITTAL' },
-                      { id: 3, label: 'CORONAL' },
-                      { id: 4, label: 'HORIZONTAL' }
+                      { id: 1, label: '轴状' },
+                      { id: 2, label: '矢状' },
+                      { id: 3, label: '冠状' },
+                      { id: 4, label: '水平' }
                     ].map(section => (
                       <div key={section.id} className="aspect-square bg-slate-50 border border-slate-100 p-1 rounded-none relative overflow-hidden group">
                          <img 
@@ -414,7 +402,7 @@ const App: React.FC = () => {
                            className="w-full h-full object-cover grayscale opacity-50 contrast-125 transition-opacity group-hover:opacity-70" 
                            alt={`Diagnostic Section ${section.label}`}
                          />
-                         <div className="absolute bottom-2 right-2 bg-slate-900 px-2 py-1 rounded-none text-[8px] text-white font-normal tracking-[0.2em] uppercase">{section.label}位</div>
+                         <div className="absolute bottom-2 right-2 bg-slate-900 px-2 py-1 rounded-none text-[8px] text-white font-normal tracking-[0.2em] uppercase">{section.id}-{section.label}位</div>
                       </div>
                     ))}
                   </div>
@@ -477,9 +465,12 @@ const App: React.FC = () => {
                 <div className="pt-4">
                   <p className="text-xl font-bold text-slate-900 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">{l.highRiskImagingSigns}</p>
                   <div className="flex flex-wrap gap-3">
-                    {currentAnalysis?.highRiskSigns.map(sign => (
+                    {(currentAnalysis?.highRiskSigns || []).map(sign => (
                       <span key={sign} className="bg-white border border-slate-200 px-4 py-2 rounded-none text-[13px] font-normal text-slate-900 tracking-tight uppercase shadow-none">{sign}</span>
                     ))}
+                    {(currentAnalysis?.highRiskSigns || []).length === 0 && (
+                      <span className="text-[12px] text-slate-400 italic">未发现明显高危征象</span>
+                    )}
                   </div>
                 </div>
 

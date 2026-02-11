@@ -1,0 +1,7 @@
+{
+  "name": "M3-IAN Surgical Risk Assessment System",
+  "description": "A high-fidelity medical imaging analysis platform for dental professionals, featuring automated third molar and inferior alveolar canal risk assessment.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
